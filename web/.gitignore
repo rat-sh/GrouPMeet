@@ -12,10 +12,6 @@ dist
 dist-ssr
 *.local
 .env
-<<<<<<< HEAD
-=======
-
->>>>>>> f8ea703 (feat: integrate Clerk auth, fix TOCTOU race, improve error handling)
 
 # Editor directories and files
 .vscode/*
