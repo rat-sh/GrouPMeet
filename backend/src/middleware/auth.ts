@@ -9,7 +9,7 @@ export const protectRoute = [
     async (req: AuthRequest, res: Response, next: NextFunction) => {
 
         try {
-            const { userId: clerkId } = getAuth(req) as { userId: string }
+            const { userId: clerkId } = getAuth(req)
             if (!clerkId) return res.status(401).json({ error: "Unauthorized" })
 
             const user = await User.findOne({ clerkId })
@@ -17,11 +17,13 @@ export const protectRoute = [
 
             req.userId = user._id.toString();
 
-            next()
+            return next()
 
         } catch (error) {
-            console.log("Auth middleware error:", error)
-            return res.status(500).json({ error: "Internal server error" })
+            console.error("Auth middleware error:", error)
+            res.status(500);
+            next(error);
+
         }
     }
 ]
