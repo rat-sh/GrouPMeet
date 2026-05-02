@@ -3,6 +3,15 @@ import type { AuthRequest } from "../middleware/auth";
 import type { Response, Request, NextFunction } from "express";
 import { clerkClient, getAuth } from "@clerk/express";
 
+/**
+ * Fetches the currently authenticated user and sends it in the HTTP response.
+ *
+ * Attempts to load the user identified by `req.userId`. If the user is not found,
+ * responds with 404 and `{ error: "User not found" }`. On unexpected errors,
+ * sets the response status to 500 and forwards the error to `next`.
+ *
+ * @param req - Express request expected to contain the authenticated user's id at `req.userId`
+ */
 export async function getMe(req: AuthRequest, res: Response, next: NextFunction) {
     try {
         const userId = req.userId;
@@ -20,6 +29,11 @@ export async function getMe(req: AuthRequest, res: Response, next: NextFunction)
     }
 }
 
+/**
+ * Ensure a local User record exists for the authenticated Clerk user and respond with that user.
+ *
+ * Extracts the Clerk `userId` from the request authentication. If `userId` is absent, responds with 401 Unauthorized. Finds a local User by `clerkId`; if none exists, fetches the Clerk user and creates a local User (setting `clerkId`, `name`, `email`, and `avatar`) before responding. On error, sets the response status to 500 and forwards the error to `next`.
+ */
 export async function authCallback(req: Request, res: Response, next: NextFunction) {
     try {
         const { userId: clerkId } = getAuth(req) as { userId: string }
