@@ -14,7 +14,7 @@ export async function getMessages(req: AuthRequest, res: Response, next: NextFun
         });
 
         if (!chat) {
-            throw new Error("Chat not found");
+            return res.status(404).json({ message: "Chat not found" });
         }
 
         const messages = await Message.find({ chat: chatId })

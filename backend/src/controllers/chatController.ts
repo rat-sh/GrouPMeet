@@ -1,6 +1,7 @@
 import type { NextFunction, Response } from "express";
 import type { AuthRequest } from "../middleware/auth";
 import { Chat } from "../models/Chat";
+import { Types } from "mongoose";
 
 export async function getChats(req: AuthRequest, res: Response, next: NextFunction) {
     try {
@@ -8,16 +9,17 @@ export async function getChats(req: AuthRequest, res: Response, next: NextFuncti
         const chats = await Chat.find({ participants: userId })
             .populate("participants", "name email avatar")
             .populate("lastMessage")
-            .sort({ lastMessage: -1 })
+            .sort({ lastMessageAt: -1 })
 
         const formattedChats = chats.map(chat => {
             const otherParticipant = chat.participants
                 .find(p => p._id.toString() !== userId);
+
             return {
                 _id: chat._id,
-                participant: otherParticipant,
+                participant: otherParticipant ?? null,
                 lastMessage: chat.lastMessage,
-                lastMessageAt: chat.lastMessage,
+                lastMessageAt: chat.lastMessageAt,
                 createdAt: chat.createdAt,
             };
         });
@@ -35,20 +37,27 @@ export async function getOrCreateChat(req: AuthRequest, res: Response, next: Nex
         const userId = req.userId;
         const { participantId } = req.params;
 
-        // checking, chats which already exist between those two participants
-        let chat = await Chat.findOne({
-            participants: { $all: [userId, participantId] },
-        })
+        if (!participantId) {
+            return res.status(400).json({ message: "Participant ID is required" });
+        }
+
+        if (participantId === userId) {
+            return res.status(400).json({ message: "You cannot create a chat with yourself" });
+        }
+
+        if (!Types.ObjectId.isValid(participantId as string)) {
+            return res.status(400).json({ message: "Invalid Participant ID" });
+        }
+
+        // Atomic upsert — avoids TOCTOU race between find and insert
+        const participants = [userId, participantId].sort(); // normalize order for unique index
+        const chat = await Chat.findOneAndUpdate(
+            { participants: { $all: participants } },
+            { $setOnInsert: { participants } },
+            { new: true, upsert: true }
+        )
             .populate("participants", "name email avatar")
             .populate("lastMessage");
-
-        if (!chat) {
-            const newChat = new Chat({
-                participants: [userId, participantId]
-            });
-            await newChat.save();
-            chat = await newChat.populate("participants", "name email avatar");
-        }
 
         const otherParticipant = chat.participants.find((p) =>
             p._id.toString() !== userId);
@@ -57,7 +66,7 @@ export async function getOrCreateChat(req: AuthRequest, res: Response, next: Nex
             _id: chat._id,
             participant: otherParticipant ?? null,
             lastMessage: chat.lastMessage,
-            lastMessageAt: chat.lastMessage,
+            lastMessageAt: chat.lastMessageAt,
             createdAt: chat.createdAt,
         })
 

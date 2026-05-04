@@ -5,7 +5,7 @@ import { User } from "../models/User";
 export async function getUsers(req: AuthRequest, res: Response, next: NextFunction) {
     try {
         const userId = req.userId;
-        const users = await User.find({ _id: { $ne: userId } }).select("name email avatar").limit(30);
+        const users = await User.find({ _id: { $ne: userId } }).select("name avatar").limit(30);
         res.json(users)
     }
     catch (error) {
