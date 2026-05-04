@@ -1,0 +1,14 @@
+node_modules
+*.log
+npm-debug.log
+.env
+.git
+.gitignore
+.env.local
+.DS_Store
+.expo
+mobile
+*.md 
+.antigravity
+.vscode
+README.md
