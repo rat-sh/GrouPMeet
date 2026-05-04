@@ -30,10 +30,11 @@ app.use("/api/message", messageRoutes);
 app.use("/api/users", userRoutes);
 
 if(process.env.NODE_ENV === "production"){
-    app.use(express.static(path.join(__dirname,"../../web/dist")))
+    const webDist = process.env.WEB_DIST_PATH ?? path.join(__dirname,"../../web/dist");
+    app.use(express.static(webDist));
 
-    app.get("*",(_,res)=>{
-        res.sendFile(path.join(__dirname,"../../web/dist/index.html"));
+    app.get("/{*path}",(_,res)=>{
+        res.sendFile(path.join(webDist,"index.html"));
     })
 }
 
