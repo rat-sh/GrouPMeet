@@ -3,6 +3,7 @@ import { clerkMiddleware } from '@clerk/express'
 
 import authRoutes from "./routes/authRoutes";
 import chatRoutes from "./routes/chatRoutes";
+import groupRoutes from "./routes/groupRoutes";
 import messageRoutes from "./routes/messageRoutes";
 import userRoutes from "./routes/userRoutes"
 import { errorHandler } from "./middleware/errorHandler";
@@ -23,6 +24,7 @@ app.get("/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/groups", groupRoutes);
 app.use("/api/message", messageRoutes);
 app.use("/api/users", userRoutes);
 

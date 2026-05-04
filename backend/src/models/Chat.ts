@@ -1,11 +1,18 @@
 import mongoose, { Schema, type Document } from "mongoose";
 
 export interface IChat extends Document {
+    // common
     participants: mongoose.Types.ObjectId[];
-    lastMessage?: mongoose.Types.ObjectId;
+    lastMessage: mongoose.Types.ObjectId | null;
     lastMessageAt?: Date;
     createdAt: Date;
     updatedAt: Date;
+
+    // group-specific (undefined/null for DMs)
+    isGroup: boolean;
+    name?: string;
+    avatar?: string;
+    admins?: mongoose.Types.ObjectId[];
 }
 
 const ChatSchema = new Schema<IChat>(
@@ -14,22 +21,49 @@ const ChatSchema = new Schema<IChat>(
             {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "User",
-                required: true
-            }
+                required: true,
+            },
         ],
         lastMessage: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Message",
-            default: null
+            default: null,
         },
         lastMessageAt: {
             type: Date,
-            default: Date.now(),
-        }
+            default: Date.now,
+        },
+
+        // --- group fields ---
+        isGroup: {
+            type: Boolean,
+            default: false,
+        },
+        name: {
+            type: String,
+            trim: true,
+        },
+        avatar: {
+            type: String,
+        },
+        admins: [
+            {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User",
+            },
+        ],
     },
     { timestamps: true }
-)
+);
 
-ChatSchema.index({ participants: 1 }, { unique: true });
+// Unique index only for DM chats (isGroup: false) so two users can't have
+// duplicate DMs, but any number of group chats can share the same participants.
+ChatSchema.index(
+    { participants: 1 },
+    {
+        unique: true,
+        partialFilterExpression: { isGroup: false },
+    }
+);
 
-export const Chat = mongoose.model("Chat", ChatSchema)
+export const Chat = mongoose.model("Chat", ChatSchema);

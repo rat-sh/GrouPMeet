@@ -1,12 +1,16 @@
-import { Socket, Server as SocketServer } from "socket.io";
+import { Server as SocketServer } from "socket.io";
 import { Server as HttpServer } from "http";
 import { verifyToken } from "@clerk/express";
 import { Message } from "../models/Message";
 import { Chat } from "../models/Chat";
 import { User } from "../models/User";
 
-// store online users in memory: userId -> socketId
-export const onlineUsers: Map<string, string> = new Map();
+// store online users in memory: userId -> Set<socketId>
+// Using a Set supports multi-device / multi-tab connections per user.
+export const onlineUsers: Map<string, Set<string>> = new Map();
+
+// Reverse map for fast userId lookup on disconnect: socketId -> userId
+const socketUserMap: Map<string, string> = new Map();
 
 export const initializeSocket = (httpServer: HttpServer) => {
     const allowedOrigins = [
@@ -18,7 +22,6 @@ export const initializeSocket = (httpServer: HttpServer) => {
     const io = new SocketServer(httpServer, { cors: { origin: allowedOrigins } });
 
     // verify socket connection - if the user is authenticated, we will store the user id in the socket
-
     io.use(async (socket, next) => {
         const token = socket.handshake.auth.token; // this is what user will send from client
         if (!token) return next(new Error("Authentication error"));
@@ -35,7 +38,12 @@ export const initializeSocket = (httpServer: HttpServer) => {
 
             next();
         } catch (error: any) {
-            next(new Error(error));
+            if (error instanceof Error) {
+                next(error);
+            } else {
+                const message = error?.message ?? (typeof error === "string" ? error : JSON.stringify(error));
+                next(new Error(message));
+            }
         }
     });
 
@@ -47,26 +55,76 @@ export const initializeSocket = (httpServer: HttpServer) => {
         // send list of currently online users to the newly connected client
         socket.emit("online-users", { userIds: Array.from(onlineUsers.keys()) });
 
-        // store user in the onlineUsers map
-        onlineUsers.set(userId, socket.id);
+        // Add this socket to the user's Set. Only emit "user-online" on the
+        // very first connection so other clients don't receive spurious events
+        // when the same user opens a second tab/device.
+        const isFirstConnection = !onlineUsers.has(userId);
+        if (!onlineUsers.has(userId)) {
+            onlineUsers.set(userId, new Set());
+        }
+        onlineUsers.get(userId)!.add(socket.id);
+        socketUserMap.set(socket.id, userId);
 
-        // notify others that this current user is online
-        socket.broadcast.emit("user-online", { userId });
+        if (isFirstConnection) {
+            socket.broadcast.emit("user-online", { userId });
+        }
 
         socket.join(`user:${userId}`);
 
-        socket.on("join-chat", (chatId: string) => {
-            socket.join(`chat:${chatId}`);
+        // join-chat: verify the authenticated user is actually a participant
+        // before allowing the socket into the room.
+        socket.on("join-chat", async (chatId: string) => {
+            try {
+                const chat = await Chat.findOne({
+                    _id: chatId,
+                    participants: userId,
+                });
+
+                if (!chat) {
+                    socket.emit("socket-error", { message: "Not authorized to join this chat" });
+                    return;
+                }
+
+                socket.join(`chat:${chatId}`);
+            } catch {
+                socket.emit("socket-error", { message: "Failed to join chat" });
+            }
         });
 
-        socket.on("leave-chat", (chatId: string) => {
-            socket.leave(`chat:${chatId}`);
+        // leave-chat: mirror the same membership guard to prevent unauthorized leaves
+        socket.on("leave-chat", async (chatId: string) => {
+            try {
+                const chat = await Chat.findOne({
+                    _id: chatId,
+                    participants: userId,
+                });
+
+                if (!chat) {
+                    socket.emit("socket-error", { message: "Not authorized" });
+                    return;
+                }
+
+                socket.leave(`chat:${chatId}`);
+            } catch {
+                socket.emit("socket-error", { message: "Failed to leave chat" });
+            }
         });
 
         // handle sending messages
         socket.on("send-message", async (data: { chatId: string; text: string }) => {
             try {
-                const { chatId, text } = data;
+                const { chatId } = data;
+                const text = data.text?.trim();
+
+                if (!text || text.length === 0) {
+                    socket.emit("socket-error", { message: "Invalid message" });
+                    return;
+                }
+
+                if (text.length > 2000) {
+                    socket.emit("socket-error", { message: "Invalid message" });
+                    return;
+                }
 
                 const chat = await Chat.findOne({
                     _id: chatId,
@@ -93,8 +151,18 @@ export const initializeSocket = (httpServer: HttpServer) => {
                 // emit to chat room (for users inside the chat)
                 io.to(`chat:${chatId}`).emit("new-message", message);
 
-                // also emit to participants' personal rooms (for chat list view)
+                // emit to each participant's personal room only if NONE of their
+                // sockets are already in the chat room (avoids duplicate delivery
+                // across multi-device connections).
+                const chatRoomSockets = io.sockets.adapter.rooms.get(`chat:${chatId}`) ?? new Set<string>();
                 for (const participantId of chat.participants) {
+                    const participantSockets = onlineUsers.get(participantId.toString());
+                    if (!participantSockets) continue;
+
+                    // Skip if any of the participant's sockets are in the chat room
+                    const alreadyInRoom = [...participantSockets].some((sid) => chatRoomSockets.has(sid));
+                    if (alreadyInRoom) continue;
+
                     io.to(`user:${participantId}`).emit("new-message", message);
                 }
             } catch (error) {
@@ -102,7 +170,9 @@ export const initializeSocket = (httpServer: HttpServer) => {
             }
         });
 
-        socket.on("typing", async (data: { chatId: string; isTyping: boolean }) => {
+        // typing handler: accepts an optional recipientId to skip the DB lookup
+        // on every keystroke. Falls back to Chat.findById for backward compatibility.
+        socket.on("typing", async (data: { chatId: string; isTyping: boolean; recipientId?: string }) => {
             const typingPayload = {
                 userId,
                 chatId: data.chatId,
@@ -112,7 +182,13 @@ export const initializeSocket = (httpServer: HttpServer) => {
             // emit to chat room (for users inside the chat)
             socket.to(`chat:${data.chatId}`).emit("typing", typingPayload);
 
-            // also emit to other participant's personal room (for chat list view)
+            // fast path: client provided recipientId — skip DB query entirely
+            if (data.recipientId) {
+                socket.to(`user:${data.recipientId}`).emit("typing", typingPayload);
+                return;
+            }
+
+            // fallback: look up the other participant via DB (backward compat)
             try {
                 const chat = await Chat.findById(data.chatId);
                 if (chat) {
@@ -121,16 +197,27 @@ export const initializeSocket = (httpServer: HttpServer) => {
                         socket.to(`user:${otherParticipantId}`).emit("typing", typingPayload);
                     }
                 }
-            } catch (error) {
+            } catch {
                 // silently fail - typing indicator is not critical
             }
         });
 
         socket.on("disconnect", () => {
-            onlineUsers.delete(userId);
+            // Use the reverse map for reliable userId resolution
+            const resolvedUserId = socketUserMap.get(socket.id) ?? userId;
+            socketUserMap.delete(socket.id);
 
-            // notify others
-            socket.broadcast.emit("user-offline", { userId });
+            const userSockets = onlineUsers.get(resolvedUserId);
+            if (!userSockets) return; // guard against rapid/duplicate disconnect events
+
+            userSockets.delete(socket.id);
+
+            // Only emit user-offline and clean up when ALL sockets for this user
+            // are gone, preventing premature offline signals on multi-device use.
+            if (userSockets.size === 0) {
+                onlineUsers.delete(resolvedUserId);
+                socket.broadcast.emit("user-offline", { userId: resolvedUserId });
+            }
         });
     });
 

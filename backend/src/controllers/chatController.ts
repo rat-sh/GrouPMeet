@@ -12,11 +12,27 @@ export async function getChats(req: AuthRequest, res: Response, next: NextFuncti
             .sort({ lastMessageAt: -1 })
 
         const formattedChats = chats.map(chat => {
+            if (chat.isGroup) {
+                return {
+                    _id: chat._id,
+                    isGroup: true,
+                    name: chat.name,
+                    avatar: chat.avatar ?? null,
+                    participants: chat.participants,
+                    admins: chat.admins ?? [],
+                    lastMessage: chat.lastMessage,
+                    lastMessageAt: chat.lastMessageAt,
+                    createdAt: chat.createdAt,
+                };
+            }
+
+            // DM — return the other participant
             const otherParticipant = chat.participants
                 .find(p => p._id.toString() !== userId);
 
             return {
                 _id: chat._id,
+                isGroup: false,
                 participant: otherParticipant ?? null,
                 lastMessage: chat.lastMessage,
                 lastMessageAt: chat.lastMessageAt,
@@ -31,6 +47,7 @@ export async function getChats(req: AuthRequest, res: Response, next: NextFuncti
         next(error);
     }
 }
+
 
 export async function getOrCreateChat(req: AuthRequest, res: Response, next: NextFunction) {
     try {
