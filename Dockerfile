@@ -23,9 +23,10 @@ COPY backend/ ./
 
 # expose port
 EXPOSE 5000
-# set non-sensitive defaults 
+# set non-sensitive defaults
 ENV PORT=5000
 ENV NODE_ENV=production
+ENV WEB_DIST_PATH=/app/web/dist
 
 # start the application
 CMD ["bun", "index.ts"]

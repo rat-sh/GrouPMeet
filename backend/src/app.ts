@@ -29,8 +29,6 @@ app.use("/api/groups", groupRoutes);
 app.use("/api/message", messageRoutes);
 app.use("/api/users", userRoutes);
 
-app.use(errorHandler);
-
 if(process.env.NODE_ENV === "production"){
     app.use(express.static(path.join(__dirname,"../../web/dist")))
 
@@ -38,5 +36,8 @@ if(process.env.NODE_ENV === "production"){
         res.sendFile(path.join(__dirname,"../../web/dist/index.html"));
     })
 }
+
+// errorHandler must always be last
+app.use(errorHandler);
 
 export default app;
