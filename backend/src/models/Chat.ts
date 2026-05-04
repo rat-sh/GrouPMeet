@@ -66,4 +66,11 @@ ChatSchema.index(
     }
 );
 
+// Normalize participant order for DMs so [A,B] and [B,A] map to the same index entry.
+ChatSchema.pre("save", async function () {
+    if (!this.isGroup && this.isModified("participants")) {
+        this.participants.sort((a, b) => a.toString().localeCompare(b.toString()));
+    }
+});
+
 export const Chat = mongoose.model("Chat", ChatSchema);

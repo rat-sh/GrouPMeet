@@ -1,6 +1,8 @@
 import type { NextFunction, Response } from "express";
 import type { AuthRequest } from "../middleware/auth";
 import { Chat } from "../models/Chat";
+import { Message } from "../models/Message";
+import { User } from "../models/User";
 import { Types } from "mongoose";
 
 // ─── Create Group ────────────────────────────────────────────────────────────
@@ -23,18 +25,24 @@ export async function createGroup(req: AuthRequest, res: Response, next: NextFun
             return res.status(400).json({ message: "At least one other member is required" });
         }
 
-        for (const id of memberIds) {
-            if (!Types.ObjectId.isValid(id)) {
-                return res.status(400).json({ message: `Invalid member ID: ${id}` });
-            }
+        // Validate ObjectId format
+        const invalidFormat = memberIds.filter((id) => !Types.ObjectId.isValid(id));
+        if (invalidFormat.length > 0) {
+            return res.status(400).json({ message: `Invalid member IDs: ${invalidFormat.join(", ")}` });
+        }
+
+        // Verify all memberIds actually exist in the User collection
+        const existingUsers = await User.find({ _id: { $in: memberIds } }, "_id");
+        const existingIds = new Set(existingUsers.map((u) => u._id.toString()));
+        const nonExistent = memberIds.filter((id) => !existingIds.has(id));
+        if (nonExistent.length > 0) {
+            return res.status(400).json({ message: `Users not found: ${nonExistent.join(", ")}` });
         }
 
         // Deduplicate and always include creator
         const participantSet = new Set<string>([userId, ...memberIds]);
         const participants = Array.from(participantSet);
 
-        // Use `new Chat().save()` to avoid Mongoose overload resolution issues
-        // with `Chat.create()` when extra fields like `isGroup` are present.
         const group = new Chat({
             isGroup: true,
             name: name.trim(),
@@ -49,7 +57,6 @@ export async function createGroup(req: AuthRequest, res: Response, next: NextFun
 
         res.status(201).json(group);
     } catch (error) {
-        res.status(500);
         next(error);
     }
 }
@@ -76,7 +83,6 @@ export async function getGroup(req: AuthRequest, res: Response, next: NextFuncti
 
         res.json(group);
     } catch (error) {
-        res.status(500);
         next(error);
     }
 }
@@ -94,7 +100,8 @@ export async function updateGroup(req: AuthRequest, res: Response, next: NextFun
             return res.status(400).json({ message: "Invalid group ID" });
         }
 
-        const group = await Chat.findOne({ _id: groupId, isGroup: true });
+        // participants: userId ensures non-members can't even reach the admin check
+        const group = await Chat.findOne({ _id: groupId, isGroup: true, participants: userId });
         if (!group) return res.status(404).json({ message: "Group not found" });
 
         const isAdmin = group.admins?.some((id) => id.toString() === userId);
@@ -111,7 +118,6 @@ export async function updateGroup(req: AuthRequest, res: Response, next: NextFun
 
         res.json(group);
     } catch (error) {
-        res.status(500);
         next(error);
     }
 }
@@ -133,10 +139,9 @@ export async function addMembers(req: AuthRequest, res: Response, next: NextFunc
             return res.status(400).json({ message: "At least one member ID is required" });
         }
 
-        for (const id of memberIds) {
-            if (!Types.ObjectId.isValid(id)) {
-                return res.status(400).json({ message: `Invalid member ID: ${id}` });
-            }
+        const invalidFormat = memberIds.filter((id) => !Types.ObjectId.isValid(id));
+        if (invalidFormat.length > 0) {
+            return res.status(400).json({ message: `Invalid member IDs: ${invalidFormat.join(", ")}` });
         }
 
         const group = await Chat.findOne({ _id: groupId, isGroup: true });
@@ -147,10 +152,19 @@ export async function addMembers(req: AuthRequest, res: Response, next: NextFunc
             return res.status(403).json({ message: "Only admins can add members" });
         }
 
-        const currentIds = group.participants.map((p) => p.toString());
-        const newIds = memberIds.filter((id) => !currentIds.includes(id));
+        // O(1) membership check with a Set
+        const currentIds = new Set(group.participants.map((p) => p.toString()));
+        const newIds = memberIds.filter((id) => !currentIds.has(id));
         if (newIds.length === 0) {
             return res.status(400).json({ message: "All provided users are already members" });
+        }
+
+        // Verify new members exist in the User collection
+        const existingUsers = await User.find({ _id: { $in: newIds } }, "_id");
+        const existingIds = new Set(existingUsers.map((u) => u._id.toString()));
+        const nonExistent = newIds.filter((id) => !existingIds.has(id));
+        if (nonExistent.length > 0) {
+            return res.status(400).json({ message: `Users not found: ${nonExistent.join(", ")}` });
         }
 
         group.participants.push(...newIds.map((id) => new Types.ObjectId(id)));
@@ -160,7 +174,6 @@ export async function addMembers(req: AuthRequest, res: Response, next: NextFunc
 
         res.json(group);
     } catch (error) {
-        res.status(500);
         next(error);
     }
 }
@@ -177,30 +190,35 @@ export async function removeMember(req: AuthRequest, res: Response, next: NextFu
             return res.status(400).json({ message: "Invalid ID" });
         }
 
-        const group = await Chat.findOne({ _id: groupId, isGroup: true });
-        if (!group) return res.status(404).json({ message: "Group not found" });
+        // Fetch first for the authorization check
+        const groupForAuth = await Chat.findOne({ _id: groupId, isGroup: true });
+        if (!groupForAuth) return res.status(404).json({ message: "Group not found" });
 
-        const isAdmin = group.admins?.some((id) => id.toString() === userId);
-        // Admins can remove anyone; a member can only remove themselves (leave)
+        const isAdmin = groupForAuth.admins?.some((id) => id.toString() === userId);
+        // Admins can remove anyone; a member can only remove themselves
         if (!isAdmin && memberId !== userId) {
             return res.status(403).json({ message: "Only admins can remove members" });
         }
 
-        group.participants = group.participants.filter((p) => p.toString() !== memberId) as typeof group.participants;
-        group.admins = group.admins?.filter((a) => a.toString() !== memberId) as typeof group.admins;
+        // Atomic $pull from both arrays in one operation
+        const updated = await Chat.findOneAndUpdate(
+            { _id: groupId, isGroup: true, participants: new Types.ObjectId(memberId) },
+            { $pull: { participants: new Types.ObjectId(memberId), admins: new Types.ObjectId(memberId) } },
+            { new: true }
+        );
+        if (!updated) return res.status(404).json({ message: "Member not found in group" });
 
-        // If no admins left, promote the oldest remaining member
-        if (group.admins && group.admins.length === 0 && group.participants.length > 0) {
-            group.admins = [group.participants[0]] as typeof group.admins;
+        // If no admins remain, promote the first remaining participant
+        if (updated.admins && updated.admins.length === 0 && updated.participants.length > 0) {
+            await Chat.updateOne({ _id: groupId }, { $addToSet: { admins: updated.participants[0] } });
+            updated.admins = [updated.participants[0]] as typeof updated.admins;
         }
 
-        await group.save();
-        await group.populate("participants", "name avatar");
-        await group.populate("admins", "name avatar");
+        await updated.populate("participants", "name avatar");
+        await updated.populate("admins", "name avatar");
 
-        res.json(group);
+        res.json(updated);
     } catch (error) {
-        res.status(500);
         next(error);
     }
 }
@@ -217,7 +235,8 @@ export async function promoteToAdmin(req: AuthRequest, res: Response, next: Next
             return res.status(400).json({ message: "Invalid ID" });
         }
 
-        const group = await Chat.findOne({ _id: groupId, isGroup: true });
+        // participants: userId ensures non-members can't reach the admin check
+        const group = await Chat.findOne({ _id: groupId, isGroup: true, participants: userId });
         if (!group) return res.status(404).json({ message: "Group not found" });
 
         const isAdmin = group.admins?.some((id) => id.toString() === userId);
@@ -229,7 +248,6 @@ export async function promoteToAdmin(req: AuthRequest, res: Response, next: Next
         const alreadyAdmin = group.admins?.some((a) => a.toString() === memberId);
         if (alreadyAdmin) return res.status(400).json({ message: "User is already an admin" });
 
-        // Ensure admins array exists before pushing
         if (!group.admins) group.admins = [];
         group.admins.push(new Types.ObjectId(memberId));
 
@@ -239,7 +257,6 @@ export async function promoteToAdmin(req: AuthRequest, res: Response, next: Next
 
         res.json(group);
     } catch (error) {
-        res.status(500);
         next(error);
     }
 }
@@ -255,27 +272,28 @@ export async function leaveGroup(req: AuthRequest, res: Response, next: NextFunc
             return res.status(400).json({ message: "Invalid group ID" });
         }
 
-        const group = await Chat.findOne({ _id: groupId, isGroup: true, participants: userId });
-        if (!group) return res.status(404).json({ message: "Group not found or you are not a member" });
-
-        group.participants = group.participants.filter((p) => p.toString() !== userId) as typeof group.participants;
-        group.admins = group.admins?.filter((a) => a.toString() !== userId) as typeof group.admins;
+        // Atomic $pull — same race-safe pattern as removeMember
+        const updated = await Chat.findOneAndUpdate(
+            { _id: groupId, isGroup: true, participants: new Types.ObjectId(userId) },
+            { $pull: { participants: new Types.ObjectId(userId), admins: new Types.ObjectId(userId) } },
+            { new: true }
+        );
+        if (!updated) return res.status(404).json({ message: "Group not found or you are not a member" });
 
         // Auto-promote if no admins remain
-        if (group.admins && group.admins.length === 0 && group.participants.length > 0) {
-            group.admins = [group.participants[0]] as typeof group.admins;
+        if (updated.admins && updated.admins.length === 0 && updated.participants.length > 0) {
+            await Chat.updateOne({ _id: groupId }, { $addToSet: { admins: updated.participants[0] } });
         }
 
-        // Delete empty group
-        if (group.participants.length === 0) {
-            await group.deleteOne();
+        // Delete empty group and cascade messages
+        if (updated.participants.length === 0) {
+            await Message.deleteMany({ chat: updated._id });
+            await updated.deleteOne();
             return res.json({ message: "Group deleted (no members left)" });
         }
 
-        await group.save();
         res.json({ message: "Left the group" });
     } catch (error) {
-        res.status(500);
         next(error);
     }
 }
@@ -291,16 +309,19 @@ export async function deleteGroup(req: AuthRequest, res: Response, next: NextFun
             return res.status(400).json({ message: "Invalid group ID" });
         }
 
-        const group = await Chat.findOne({ _id: groupId, isGroup: true });
+        // participants: userId ensures non-members can't reach the admin check
+        const group = await Chat.findOne({ _id: groupId, isGroup: true, participants: userId });
         if (!group) return res.status(404).json({ message: "Group not found" });
 
         const isAdmin = group.admins?.some((id) => id.toString() === userId);
         if (!isAdmin) return res.status(403).json({ message: "Only admins can delete the group" });
 
+        // Cascade-delete all messages before removing the group
+        await Message.deleteMany({ chat: group._id });
         await group.deleteOne();
+
         res.json({ message: "Group deleted" });
     } catch (error) {
-        res.status(500);
         next(error);
     }
 }

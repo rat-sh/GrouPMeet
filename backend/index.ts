@@ -6,7 +6,13 @@ import { initializeSocket } from "./src/utils/socket";
 const PORT = process.env.PORT || 5000;
 
 const httpServer = createServer(app);
-initializeSocket(httpServer);
+try {
+    initializeSocket(httpServer);
+} catch (error) {
+    console.error("Failed to initialize socket server:", error);
+    httpServer.close();
+    process.exit(1);
+}
 
 connectDB().then(() => {
     httpServer.listen(PORT, () => {

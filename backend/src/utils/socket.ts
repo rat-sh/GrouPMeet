@@ -59,7 +59,7 @@ export const initializeSocket = (httpServer: HttpServer) => {
         // very first connection so other clients don't receive spurious events
         // when the same user opens a second tab/device.
         const isFirstConnection = !onlineUsers.has(userId);
-        if (!onlineUsers.has(userId)) {
+        if (isFirstConnection) {
             onlineUsers.set(userId, new Set());
         }
         onlineUsers.get(userId)!.add(socket.id);
@@ -91,23 +91,8 @@ export const initializeSocket = (httpServer: HttpServer) => {
             }
         });
 
-        // leave-chat: mirror the same membership guard to prevent unauthorized leaves
-        socket.on("leave-chat", async (chatId: string) => {
-            try {
-                const chat = await Chat.findOne({
-                    _id: chatId,
-                    participants: userId,
-                });
-
-                if (!chat) {
-                    socket.emit("socket-error", { message: "Not authorized" });
-                    return;
-                }
-
-                socket.leave(`chat:${chatId}`);
-            } catch {
-                socket.emit("socket-error", { message: "Failed to leave chat" });
-            }
+        socket.on("leave-chat", (chatId: string) => {
+            socket.leave(`chat:${chatId}`);
         });
 
         // handle sending messages
@@ -170,9 +155,8 @@ export const initializeSocket = (httpServer: HttpServer) => {
             }
         });
 
-        // typing handler: accepts an optional recipientId to skip the DB lookup
-        // on every keystroke. Falls back to Chat.findById for backward compatibility.
-        socket.on("typing", async (data: { chatId: string; isTyping: boolean; recipientId?: string }) => {
+        // typing handler: always uses DB lookup so only real participants receive events.
+        socket.on("typing", async (data: { chatId: string; isTyping: boolean }) => {
             const typingPayload = {
                 userId,
                 chatId: data.chatId,
@@ -182,19 +166,13 @@ export const initializeSocket = (httpServer: HttpServer) => {
             // emit to chat room (for users inside the chat)
             socket.to(`chat:${data.chatId}`).emit("typing", typingPayload);
 
-            // fast path: client provided recipientId — skip DB query entirely
-            if (data.recipientId) {
-                socket.to(`user:${data.recipientId}`).emit("typing", typingPayload);
-                return;
-            }
-
-            // fallback: look up the other participant via DB (backward compat)
+            // emit to participant personal rooms via DB-verified participant list
             try {
-                const chat = await Chat.findById(data.chatId);
+                const chat = await Chat.findOne({ _id: data.chatId, participants: userId });
                 if (chat) {
-                    const otherParticipantId = chat.participants.find((p: any) => p.toString() !== userId);
-                    if (otherParticipantId) {
-                        socket.to(`user:${otherParticipantId}`).emit("typing", typingPayload);
+                    for (const participantId of chat.participants) {
+                        if (participantId.toString() === userId) continue;
+                        socket.to(`user:${participantId}`).emit("typing", typingPayload);
                     }
                 }
             } catch {
