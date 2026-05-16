@@ -13,6 +13,7 @@ export interface IChat extends Document {
     name?: string;
     avatar?: string;
     admins?: mongoose.Types.ObjectId[];
+    mode: "personal" | "education" | "professional";
 }
 
 const ChatSchema = new Schema<IChat>(
@@ -52,6 +53,11 @@ const ChatSchema = new Schema<IChat>(
                 ref: "User",
             },
         ],
+        mode: {
+            type: String,
+            enum: ["personal", "education", "professional"],
+            default: "personal",
+        },
     },
     { timestamps: true }
 );

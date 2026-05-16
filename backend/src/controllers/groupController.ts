@@ -11,10 +11,11 @@ import { Types } from "mongoose";
 export async function createGroup(req: AuthRequest, res: Response, next: NextFunction) {
     try {
         const userId = req.userId!;
-        const { name, memberIds, avatar } = req.body as {
+        const { name, memberIds, avatar, mode } = req.body as {
             name: string;
             memberIds: string[];
             avatar?: string;
+            mode?: "personal" | "education" | "professional";
         };
 
         if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -49,6 +50,7 @@ export async function createGroup(req: AuthRequest, res: Response, next: NextFun
             avatar: avatar ?? null,
             participants,
             admins: [userId],
+            mode: mode || "personal",
         });
         await group.save();
 

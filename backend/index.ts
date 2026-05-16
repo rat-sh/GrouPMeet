@@ -14,9 +14,12 @@ try {
     process.exit(1);
 }
 
+import { startKeepAlive } from "./src/utils/keepAlive";
+
 connectDB().then(() => {
     httpServer.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
+        startKeepAlive();
     });
 })
     .catch((error) => {

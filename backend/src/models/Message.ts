@@ -3,8 +3,8 @@ import mongoose, { Schema, type Document } from "mongoose";
 export interface IMessage extends Document {
     chat: mongoose.Types.ObjectId;
     sender: mongoose.Types.ObjectId;
-    text: string;
-    attachments?: string;
+    text?: string;
+    attachments?: string[];
     createdAt: Date;
     updatedAt: Date;
 }
@@ -23,7 +23,7 @@ const MessageSchema = new Schema<IMessage>(
         },
         text: {
             type: String,
-            required: true,
+            default: "",
             trim: true
         },
         attachments: [

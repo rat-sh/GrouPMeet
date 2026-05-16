@@ -96,12 +96,13 @@ export const initializeSocket = (httpServer: HttpServer) => {
         });
 
         // handle sending messages
-        socket.on("send-message", async (data: { chatId: string; text: string }) => {
+        socket.on("send-message", async (data: { chatId: string; text?: string; attachments?: string[] }) => {
             try {
                 const { chatId } = data;
-                const text = data.text?.trim();
+                const text = data.text?.trim() || "";
+                const attachments = data.attachments || [];
 
-                if (!text || text.length === 0) {
+                if (text.length === 0 && attachments.length === 0) {
                     socket.emit("socket-error", { message: "Invalid message" });
                     return;
                 }
@@ -125,6 +126,7 @@ export const initializeSocket = (httpServer: HttpServer) => {
                     chat: chatId,
                     sender: userId,
                     text,
+                    attachments,
                 });
 
                 chat.lastMessage = message._id;

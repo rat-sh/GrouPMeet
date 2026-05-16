@@ -35,18 +35,23 @@ export async function authCallback(req: Request, res: Response, next: NextFuncti
         const clerkUser = await clerkClient.users.getUser(clerkId);
 
         const email = clerkUser.emailAddresses[0]?.emailAddress;
-        const name = clerkUser.firstName
+        const displayName = clerkUser.firstName
             ? `${clerkUser.firstName} ${clerkUser.lastName || ""}`.trim()
-            : email?.split("@")[0];
+            : email?.split("@")[0] || "User";
 
-        if (!email || !name) {
-            res.status(422).json({ error: "Clerk user has no email or name" });
+        if (!email) {
+            res.status(422).json({ error: "Clerk user has no email" });
             return;
         }
 
+        // Generate a random 4-digit suffix for the username
+        const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+        const baseUsername = email.split("@")[0].replace(/[^a-zA-Z0-9]/g, "");
+        const username = `@${baseUsername}_${randomSuffix}`;
+
         const user = await User.findOneAndUpdate(
             { clerkId },
-            { $setOnInsert: { clerkId, name, email, avatar: clerkUser.imageUrl } },
+            { $setOnInsert: { clerkId, displayName, username, email, avatar: clerkUser.imageUrl } },
             { upsert: true, new: true }
         );
 

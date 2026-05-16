@@ -2,8 +2,11 @@ import mongoose, { Schema, type Document } from "mongoose";
 
 export interface IUser extends Document {
     clerkId: string;
-    name: string;
+    username: string;
+    displayName: string;
     email: string;
+    phoneNumber?: string;
+    allowPhoneDiscovery: boolean;
     avatar: string;
     createdAt: Date;
     updatedAt: Date;
@@ -16,7 +19,13 @@ const UserSchema = new Schema<IUser>(
             unique: true,
             required: true
         },
-        name: {
+        username: {
+            type: String,
+            unique: true,
+            required: true,
+            trim: true
+        },
+        displayName: {
             type: String,
             required: true,
             trim: true,
@@ -26,6 +35,16 @@ const UserSchema = new Schema<IUser>(
             required: true,
             unique: true,
             trim: true
+        },
+        phoneNumber: {
+            type: String,
+            unique: true,
+            sparse: true, // Allows multiple users to have 'null' while they are onboarding
+            trim: true
+        },
+        allowPhoneDiscovery: {
+            type: Boolean,
+            default: true
         },
         avatar: {
             type: String,

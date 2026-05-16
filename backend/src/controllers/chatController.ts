@@ -7,7 +7,7 @@ export async function getChats(req: AuthRequest, res: Response, next: NextFuncti
     try {
         const userId = req.userId
         const chats = await Chat.find({ participants: userId })
-            .populate("participants", "name email avatar")
+            .populate("participants", "displayName username email avatar")
             .populate("lastMessage")
             .sort({ lastMessageAt: -1 })
 
@@ -23,6 +23,7 @@ export async function getChats(req: AuthRequest, res: Response, next: NextFuncti
                     lastMessage: chat.lastMessage,
                     lastMessageAt: chat.lastMessageAt,
                     createdAt: chat.createdAt,
+                    mode: chat.mode,
                 };
             }
 
@@ -37,6 +38,7 @@ export async function getChats(req: AuthRequest, res: Response, next: NextFuncti
                 lastMessage: chat.lastMessage,
                 lastMessageAt: chat.lastMessageAt,
                 createdAt: chat.createdAt,
+                mode: chat.mode,
             };
         });
 
@@ -73,7 +75,7 @@ export async function getOrCreateChat(req: AuthRequest, res: Response, next: Nex
             { $setOnInsert: { participants } },
             { new: true, upsert: true }
         )
-            .populate("participants", "name email avatar")
+            .populate("participants", "displayName username email avatar")
             .populate("lastMessage");
 
         const otherParticipant = chat.participants.find((p) =>
