@@ -76,7 +76,7 @@ const NewChatScreen = () => {
             params: {
               id: chat._id,
               participantId: chat.participant?._id,
-              name: chat.participant?.name || chat.participant?.displayName,
+              name: chat.participant?.name,
               avatar: chat.participant?.avatar,
             },
           });

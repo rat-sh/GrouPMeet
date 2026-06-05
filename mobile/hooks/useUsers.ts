@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import type { User } from "@/types";
 import { useApi } from "@/lib/axios";
 
@@ -27,8 +27,6 @@ export const useMe = () => {
   });
 };
 
-import { useMutation } from "@tanstack/react-query";
-
 export const useSyncContacts = () => {
   const { apiWithAuth } = useApi();
 
@@ -43,3 +41,4 @@ export const useSyncContacts = () => {
     },
   });
 };
+
