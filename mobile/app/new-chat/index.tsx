@@ -1,71 +1,34 @@
 import UserItem from "@/components/UserItem";
 import { useGetOrCreateChat } from "@/hooks/useChats";
-import { useUsers, useSyncContacts } from "@/hooks/useUsers";
+import { useUsers } from "@/hooks/useUsers";
 import { useSocketStore } from "@/lib/socket";
-import { User } from "@/types";
-import { Ionicons } from "@expo/vector-icons";
+import { User as UserType } from "@/types";
+import { X, Search, User } from "lucide-react-native";
 import { router } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, Text, TextInput, View, ScrollView, Alert } from "react-native";
+import { ActivityIndicator, Pressable, Text, TextInput, View, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as Contacts from "expo-contacts";
+import { useAppTheme } from "@/lib/modeStore";
 
 const NewChatScreen = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [discoveredUsers, setDiscoveredUsers] = useState<User[]>([]);
+  const theme = useAppTheme();
 
   const { data: allUsers, isLoading } = useUsers();
   const { mutate: getOrCreateChat, isPending: isCreatingChat } = useGetOrCreateChat();
-  const { mutate: syncContacts, isPending: isSyncing } = useSyncContacts();
   const { onlineUsers } = useSocketStore();
-
-  const handleSyncContacts = async () => {
-    const { status } = await Contacts.requestPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission denied", "Allow contacts access to discover friends.");
-      return;
-    }
-
-    const { data } = await Contacts.getContactsAsync({
-      fields: [Contacts.Fields.PhoneNumbers],
-    });
-
-    if (data.length > 0) {
-      const phones: string[] = [];
-      data.forEach((contact) => {
-        if (contact.phoneNumbers) {
-          contact.phoneNumbers.forEach((pn) => {
-            if (pn.number) phones.push(pn.number);
-          });
-        }
-      });
-
-      syncContacts(phones, {
-        onSuccess: (foundUsers) => {
-          setDiscoveredUsers(foundUsers);
-          if (foundUsers.length > 0) {
-            Alert.alert("Success!", `We found ${foundUsers.length} friends from your contacts!`);
-          } else {
-            Alert.alert("No friends found", "None of your contacts are currently using GrouPMeet.");
-          }
-        },
-      });
-    }
-  };
 
   // client-side filtering
   const users = allUsers?.filter((u) => {
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
-    // Exclude users that are already in discoveredUsers so we don't show duplicates
-    if (discoveredUsers.some(d => d._id === u._id)) return false;
     
     return u.displayName?.toLowerCase().includes(query) || 
            u.username?.toLowerCase().includes(query) || 
            u.email?.toLowerCase().includes(query);
   });
 
-  const handleUserSelect = (user: User) => {
+  const handleUserSelect = (user: UserType) => {
     getOrCreateChat(user._id, {
       onSuccess: (chat) => {
         router.dismiss(); // go -1
@@ -86,93 +49,63 @@ const NewChatScreen = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-black" edges={["top"]}>
-      <View className="flex-1 bg-black/40 justify-end">
-        <View className="bg-surface rounded-t-3xl h-[95%] overflow-hidden">
-          <View className="px-5 pt-3 pb-3 bg-surface border-b border-surface-light flex-row items-center">
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }} edges={["top"]}>
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
+        <View style={{ backgroundColor: theme.cardBg, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: "95%", overflow: "hidden" }}>
+          
+          <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12, backgroundColor: theme.cardBg, borderBottomWidth: 1, borderBottomColor: theme.border, flexDirection: "row", alignItems: "center" }}>
             <Pressable
-              className="w-9 h-9 rounded-full items-center justify-center mr-2 bg-surface-card"
+              style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", marginRight: 8, backgroundColor: theme.border }}
               onPress={() => router.back()}
             >
-              <Ionicons name="close" size={20} color="#F4A261" />
+              <X size={20} color={theme.accent} />
             </Pressable>
 
-            <View className="flex-1">
-              <Text className="text-foreground text-xl font-semibold">New chat</Text>
-              <Text className="text-muted-foreground text-xs mt-0.5">
-                Search for a user or discover friends
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.text, fontSize: 20, fontWeight: "600" }}>New chat</Text>
+              <Text style={{ color: theme.textMuted, fontSize: 12, marginTop: 2 }}>
+                Search for a user by name or email
               </Text>
             </View>
           </View>
 
           {/* SEARCH BAR */}
-          <View className="px-5 pt-3 pb-2 bg-surface flex-row items-center gap-2">
-            <View className="flex-1 flex-row items-center bg-surface-card rounded-full px-3 py-1.5 gap-2 border border-surface-light">
-              <Ionicons name="search" size={18} color="#6B6B70" />
+          <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, backgroundColor: theme.cardBg }}>
+            <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: theme.border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 12, borderWidth: 1, borderColor: theme.border }}>
+              <Search size={18} color={theme.textMuted} style={{ marginRight: 8 }} />
               <TextInput
                 placeholder="Search users"
-                placeholderTextColor="#6B6B70"
-                className="flex-1 text-foreground text-sm"
+                placeholderTextColor={theme.textMuted}
+                style={{ flex: 1, color: theme.text, fontSize: 16 }}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 autoCapitalize="none"
               />
             </View>
-            <Pressable 
-              onPress={handleSyncContacts}
-              disabled={isSyncing}
-              className={`w-10 h-10 rounded-full items-center justify-center ${isSyncing ? "bg-[#E08F50]" : "bg-[#F4A261]"}`}
-            >
-              {isSyncing ? (
-                <ActivityIndicator size="small" color="#0D0D0F" />
-              ) : (
-                <Ionicons name="sync" size={20} color="#0D0D0F" />
-              )}
-            </Pressable>
           </View>
 
           {/* USERS LIST */}
-
-          <View className="flex-1 bg-surface">
+          <View style={{ flex: 1, backgroundColor: theme.cardBg }}>
             {isCreatingChat || isLoading ? (
-              <View className="flex-1 items-center justify-center">
-                <ActivityIndicator size="large" color="#F4A261" />
+              <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+                <ActivityIndicator size="large" color={theme.accent} />
               </View>
-            ) : (!users || users.length === 0) && discoveredUsers.length === 0 ? (
-              <View className="flex-1 items-center justify-center px-5">
-                <Ionicons name="person-outline" size={64} color="#6B6B70" />
-                <Text className="text-muted-foreground text-lg mt-4">No users found</Text>
-                <Text className="text-subtle-foreground text-sm mt-1 text-center">
-                  Try a different search term or sync your contacts
+            ) : (!users || users.length === 0) ? (
+              <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 20 }}>
+                <User size={64} color={theme.textMuted} />
+                <Text style={{ color: theme.textMuted, fontSize: 18, marginTop: 16 }}>No users found</Text>
+                <Text style={{ color: theme.textMuted, fontSize: 13, marginTop: 4, textAlign: "center" }}>
+                  Try a different search term.
                 </Text>
               </View>
             ) : (
               <ScrollView
-                className="flex-1 px-5 pt-4"
+                style={{ flex: 1, paddingHorizontal: 20, paddingTop: 16 }}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 24 }}
               >
-                {discoveredUsers.length > 0 && (
-                  <View className="mb-6">
-                    <View className="flex-row items-center gap-2 mb-3">
-                      <Ionicons name="star" size={14} color="#F4A261" />
-                      <Text className="text-[#F4A261] text-xs font-bold uppercase tracking-wider">
-                        From your contacts
-                      </Text>
-                    </View>
-                    {discoveredUsers.map((user) => (
-                      <UserItem
-                        key={user._id}
-                        user={user}
-                        isOnline={onlineUsers.has(user._id)}
-                        onPress={() => handleUserSelect(user)}
-                      />
-                    ))}
-                  </View>
-                )}
-
-                <Text className="text-muted-foreground text-xs mb-3 font-bold tracking-wider">
-                  {discoveredUsers.length > 0 ? "OTHER USERS" : "ALL USERS"}
+                <Text style={{ color: theme.textMuted, fontSize: 12, marginBottom: 12, fontWeight: "600", letterSpacing: 1 }}>
+                  ALL USERS
                 </Text>
                 {users?.map((user) => (
                   <UserItem

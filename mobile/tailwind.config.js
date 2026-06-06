@@ -7,10 +7,10 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: "#F4A261",
-          light: "#F4B183",
-          dark: "#E76F51",
-          soft: "#FFD7BA",
+          DEFAULT: "#D946EF", // Fuchsia 500
+          light: "#E879F9", // Fuchsia 400
+          dark: "#C026D3", // Fuchsia 600
+          soft: "#F5D0FE", // Fuchsia 200
         },
         surface: {
           DEFAULT: "#1A1A1D",

@@ -1,19 +1,19 @@
 import { useCreateGroup } from "@/hooks/useChats";
 import { useUsers } from "@/hooks/useUsers";
-import { User } from "@/types";
-import { Ionicons } from "@expo/vector-icons";
+import { User as UserType } from "@/types";
+import { X, Users, Search, XCircle, User, Check } from "lucide-react-native";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, Text, TextInput, View, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useModeStore, modeTheme, AppMode } from "@/lib/modeStore";
+import { useModeStore, useAppTheme, AppMode } from "@/lib/modeStore";
 
 const NewGroupScreen = () => {
   const { mode: currentMode } = useModeStore();
-  const theme = modeTheme[currentMode];
+  const theme = useAppTheme();
   const [searchQuery, setSearchQuery] = useState("");
   const [groupName, setGroupName] = useState("");
-  const [selectedUsers, setSelectedUsers] = useState<Map<string, User>>(new Map());
+  const [selectedUsers, setSelectedUsers] = useState<Map<string, UserType>>(new Map());
   const [selectedMode, setSelectedMode] = useState<AppMode>(currentMode);
 
   const { data: allUsers, isLoading } = useUsers();
@@ -25,7 +25,7 @@ const NewGroupScreen = () => {
     return u.name?.toLowerCase().includes(query) || u.email?.toLowerCase().includes(query);
   });
 
-  const toggleUser = (user: User) => {
+  const toggleUser = (user: UserType) => {
     const newSelected = new Map(selectedUsers);
     if (newSelected.has(user._id)) {
       newSelected.delete(user._id);
@@ -69,7 +69,7 @@ const NewGroupScreen = () => {
               style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", marginRight: 8, backgroundColor: theme.border }}
               onPress={() => router.back()}
             >
-              <Ionicons name="close" size={20} color={theme.accent} />
+              <X size={20} color={theme.accent} />
             </Pressable>
 
             <View style={{ flex: 1 }}>
@@ -100,7 +100,7 @@ const NewGroupScreen = () => {
           {/* Group Name Input */}
           <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, backgroundColor: theme.cardBg }}>
             <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: theme.border, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 12, borderWidth: 1, borderColor: theme.border }}>
-              <Ionicons name="people" size={20} color={theme.accent} style={{ marginRight: 8 }} />
+              <Users size={20} color={theme.accent} style={{ marginRight: 8 }} />
               <TextInput
                 placeholder="Group Name"
                 placeholderTextColor={theme.textMuted}
@@ -141,7 +141,7 @@ const NewGroupScreen = () => {
           {/* Search Bar */}
           <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8, backgroundColor: theme.cardBg }}>
             <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: theme.border, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8 }}>
-              <Ionicons name="search" size={18} color={theme.textMuted} />
+              <Search size={18} color={theme.textMuted} />
               <TextInput
                 placeholder="Search users to add"
                 placeholderTextColor={theme.textMuted}
@@ -161,17 +161,17 @@ const NewGroupScreen = () => {
                   <View key={`selected-${user._id}`} style={{ alignItems: "center" }}>
                     <View style={{ position: "relative" }}>
                       <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: theme.border, alignItems: "center", justifyContent: "center" }}>
-                        <Text style={{ fontSize: 18 }}>👤</Text>
+                        <User size={24} color={theme.textMuted} />
                       </View>
                       <Pressable
                         onPress={() => toggleUser(user)}
                         style={{ position: "absolute", bottom: -2, right: -2, width: 20, height: 20, borderRadius: 10, backgroundColor: theme.cardBg, alignItems: "center", justifyContent: "center" }}
                       >
-                        <Ionicons name="close-circle" size={20} color={theme.textMuted} />
+                        <XCircle size={20} color={theme.textMuted} />
                       </Pressable>
                     </View>
                     <Text style={{ color: theme.text, fontSize: 11, marginTop: 4 }} numberOfLines={1} ellipsizeMode="tail">
-                      {user.name.split(" ")[0]}
+                      {(user.name || user.displayName || user.username || "User").split(" ")[0]}
                     </Text>
                   </View>
                 ))}
@@ -187,7 +187,7 @@ const NewGroupScreen = () => {
               </View>
             ) : !users || users.length === 0 ? (
               <View style={{ flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 20 }}>
-                <Ionicons name="person-outline" size={64} color={theme.textMuted} />
+                <User size={64} color={theme.textMuted} />
                 <Text style={{ color: theme.textMuted, fontSize: 18, marginTop: 16 }}>No users found</Text>
               </View>
             ) : (
@@ -202,14 +202,14 @@ const NewGroupScreen = () => {
                       style={{ flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border }}
                     >
                       <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: theme.border, alignItems: "center", justifyContent: "center", marginRight: 12 }}>
-                        <Text style={{ fontSize: 16 }}>👤</Text>
+                        <User size={20} color={theme.textMuted} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ color: theme.text, fontSize: 15, fontWeight: "500" }}>{user.name}</Text>
+                        <Text style={{ color: theme.text, fontSize: 15, fontWeight: "500" }}>{user.name || user.displayName || user.username || "User"}</Text>
                         <Text style={{ color: theme.textMuted, fontSize: 13, marginTop: 2 }}>{user.email}</Text>
                       </View>
                       <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: isSelected ? 0 : 1, borderColor: theme.textMuted, backgroundColor: isSelected ? theme.accent : "transparent", alignItems: "center", justifyContent: "center" }}>
-                        {isSelected && <Ionicons name="checkmark" size={16} color={theme.bg} />}
+                        {isSelected && <Check size={16} color={theme.bg} />}
                       </View>
                     </Pressable>
                   );

@@ -3,9 +3,9 @@ import MessageBubble from "@/components/MessageBubble";
 import { useCurrentUser } from "@/hooks/useAuth";
 import { useMessages } from "@/hooks/useMessages";
 import { useSocketStore } from "@/lib/socket";
-import { useModeStore, modeTheme } from "@/lib/modeStore";
+import { useModeStore, useAppTheme } from "@/lib/modeStore";
 import { MessageSender } from "@/types";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowLeft, Phone, Video, Plus, Send, Clock, CheckCheck, Users, User } from "lucide-react-native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
@@ -25,8 +25,7 @@ const ChatDetailScreen = () => {
   const [isSending, setIsSending] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const { apiWithAuth } = useApi();
-  const { mode } = useModeStore();
-  const theme = modeTheme[mode];
+  const theme = useAppTheme();
 
   const { data: currentUser } = useCurrentUser();
   const { data: messages, isLoading } = useMessages(chatId);
@@ -138,7 +137,7 @@ const ChatDetailScreen = () => {
         borderBottomWidth: 1, borderBottomColor: theme.cardBg,
       }}>
         <Pressable onPress={() => router.back()} style={{ padding: 4 }}>
-          <Ionicons name="arrow-back" size={24} color={theme.accent} />
+          <ArrowLeft size={24} color={theme.accent} />
         </Pressable>
 
         <View style={{ flexDirection: "row", alignItems: "center", flex: 1, marginLeft: 8 }}>
@@ -146,7 +145,9 @@ const ChatDetailScreen = () => {
             {avatar
               ? <Image source={avatar} style={{ width: 40, height: 40, borderRadius: 20 }} />
               : <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.cardBg, alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ fontSize: 16 }}>{isGroup === "true" ? "👥" : "👤"}</Text>
+                  {isGroup === "true"
+                    ? <Users size={20} color={theme.textMuted} />
+                    : <User size={20} color={theme.textMuted} />}
                 </View>
             }
             {isOnline && isGroup !== "true" && (
@@ -162,14 +163,14 @@ const ChatDetailScreen = () => {
         </View>
 
         {/* Action buttons */}
-        <View style={{ flexDirection: "row", gap: 4 }}>
-          <Pressable style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" }}>
-            <Ionicons name="call-outline" size={20} color={theme.textMuted} />
-          </Pressable>
-          <Pressable style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" }}>
-            <Ionicons name="videocam-outline" size={20} color={theme.textMuted} />
-          </Pressable>
-        </View>
+          <View style={{ flexDirection: "row", gap: 4 }}>
+            <Pressable style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" }}>
+              <Phone size={20} color={theme.textMuted} />
+            </Pressable>
+            <Pressable style={{ width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" }}>
+              <Video size={20} color={theme.textMuted} />
+            </Pressable>
+          </View>
       </View>
 
       {/* ── Messages + Input ── */}
@@ -215,7 +216,7 @@ const ChatDetailScreen = () => {
                 disabled={isSending}
                 style={{ width: 32, height: 32, alignItems: "center", justifyContent: "center" }}
               >
-                <Ionicons name="add" size={24} color={isSending ? theme.textMuted : theme.accent} />
+              <Plus size={24} color={isSending ? theme.textMuted : theme.accent} />
               </Pressable>
 
               <TextInput
@@ -239,7 +240,7 @@ const ChatDetailScreen = () => {
               >
                 {isSending
                   ? <ActivityIndicator size="small" color={theme.bg} />
-                  : <Ionicons name="send" size={17} color={messageText.trim() ? theme.bg : theme.textMuted} />
+                  : <Send size={17} color={messageText.trim() ? theme.bg : theme.textMuted} />
                 }
               </Pressable>
             </View>

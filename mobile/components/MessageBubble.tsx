@@ -1,9 +1,9 @@
 import { Message } from "@/types";
 import { View, Text } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Clock, CheckCheck } from "lucide-react-native";
 import { format } from "date-fns";
 import { Image } from "expo-image";
-import { useModeStore, modeTheme } from "@/lib/modeStore";
+import { useAppTheme } from "@/lib/modeStore";
 
 interface Props {
   message: Message;
@@ -14,8 +14,7 @@ interface Props {
 }
 
 export default function MessageBubble({ message, isFromMe, isTemp, showAvatar, previousMessageIsSameSender }: Props) {
-  const { mode } = useModeStore();
-  const theme = modeTheme[mode];
+  const theme = useAppTheme();
   const timeStr = message.createdAt
     ? format(new Date(message.createdAt), "h:mm a")
     : "";
@@ -69,11 +68,9 @@ export default function MessageBubble({ message, isFromMe, isTemp, showAvatar, p
             {timeStr}
           </Text>
           {isFromMe && (
-            <Ionicons
-              name={isTemp ? "time-outline" : "checkmark-done"}
-              size={13}
-              color={isFromMe ? "rgba(255,255,255,0.9)" : theme.textMuted}
-            />
+            isTemp
+              ? <Clock size={12} color="rgba(255,255,255,0.9)" />
+              : <CheckCheck size={13} color="rgba(255,255,255,0.9)" />
           )}
         </View>
       </View>

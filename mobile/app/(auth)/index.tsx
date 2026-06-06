@@ -6,11 +6,13 @@ import useAuthSocial from "@/hooks/useSocialAuth";
 import { LinearGradient } from "expo-linear-gradient";
 import { AnimatedOrb } from "@/components/AnimatedOrb";
 import { BlurView } from "expo-blur";
+import { useAppTheme } from "@/lib/modeStore";
 
 const { width, height } = Dimensions.get("window");
 
 const AuthScreen = () => {
   const { handleSocialAuth, loadingStrategy } = useAuthSocial();
+  const theme = useAppTheme();
 
   const isLoading = loadingStrategy !== null;
 
@@ -25,28 +27,28 @@ const AuthScreen = () => {
         />
 
         <AnimatedOrb
-          colors={["#F4A261", "#E76F51"]}
+          colors={theme.gradientColors}
           size={300}
           initialX={-80}
           initialY={height * 0.1}
           duration={4000}
         />
         <AnimatedOrb
-          colors={["#E76F51", "#F4A261"]}
+          colors={[theme.gradientColors[1], theme.gradientColors[0]]}
           size={250}
           initialX={width - 100}
           initialY={height * 0.3}
           duration={5000}
         />
         <AnimatedOrb
-          colors={["#FFD7BA", "#F4A261"]}
+          colors={theme.gradientColors}
           size={200}
           initialX={width * 0.3}
           initialY={height * 0.6}
           duration={3500}
         />
         <AnimatedOrb
-          colors={["#F4B183", "#E76F51"]}
+          colors={[theme.gradientColors[1], theme.gradientColors[0]]}
           size={180}
           initialX={-50}
           initialY={height * 0.75}
@@ -65,7 +67,7 @@ const AuthScreen = () => {
         <View className="items-center pt-10">
           <View className="w-20 h-20 rounded-3xl overflow-hidden mb-4 shadow-lg shadow-orange-500/20">
             <LinearGradient
-              colors={["#fbbf24", "#f97316"]}
+              colors={theme.gradientColors}
               style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}

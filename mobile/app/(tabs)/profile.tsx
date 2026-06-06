@@ -1,41 +1,15 @@
 import { useAuth, useUser } from "@clerk/expo";
-import { View, Text, ScrollView, Pressable } from "react-native";
+import { View, Text, ScrollView, Pressable, Switch } from "react-native";
 import { Image } from "expo-image";
-import { Ionicons } from "@expo/vector-icons";
+import { ArrowLeft, Camera, Moon, Lock, AtSign, Phone, MessageSquare, BookOpen, Briefcase } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useModeStore, modeTheme } from "@/lib/modeStore";
-
-const MENU_SECTIONS = [
-  {
-    title: "Account",
-    items: [
-      { icon: "person-outline", label: "Edit Profile", color: "#F4A261" },
-      { icon: "shield-checkmark-outline", label: "Privacy & Security", color: "#10B981" },
-      { icon: "notifications-outline", label: "Notifications", value: "On", color: "#8B5CF6" },
-    ],
-  },
-  {
-    title: "Appearance",
-    items: [
-      { icon: "moon-outline", label: "Dark Mode", value: "On", color: "#6366F1" },
-      { icon: "color-palette-outline", label: "Theme Color", value: "Green", color: "#EC4899" },
-    ],
-  },
-  {
-    title: "Support",
-    items: [
-      { icon: "help-circle-outline", label: "Help Center", color: "#F59E0B" },
-      { icon: "star-outline", label: "Rate the App", color: "#F4A261" },
-      { icon: "information-circle-outline", label: "About GrouPMeet", color: "#3B82F6" },
-    ],
-  },
-];
+import { useModeStore, useAppTheme, colorPalettes } from "@/lib/modeStore";
 
 const ProfileTab = () => {
   const { signOut } = useAuth();
   const { user } = useUser();
-  const { mode, setMode } = useModeStore();
-  const theme = modeTheme[mode];
+  const { mode, setMode, paletteIndex, setPalette } = useModeStore();
+  const theme = useAppTheme();
 
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: theme.bg }}>
@@ -44,119 +18,179 @@ const ProfileTab = () => {
         contentContainerStyle={{ paddingBottom: 48, alignItems: "center" }}
       >
         <View style={{ width: "100%", maxWidth: 600 }}>
+          
+          {/* ── Header ── */}
+          <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20 }}>
+            <Pressable style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.cardBg, alignItems: "center", justifyContent: "center", marginRight: 16 }}>
+              <ArrowLeft size={20} color={theme.accent} />
+            </Pressable>
+            <Text style={{ fontSize: 24, fontWeight: "700", color: "#FFFFFF" }}>Settings</Text>
+          </View>
+
           {/* ── Avatar + Name ── */}
-          <View style={{ alignItems: "center", paddingTop: 24, paddingBottom: 8 }}>
+          <View style={{ alignItems: "center", paddingBottom: 24 }}>
             <View style={{ position: "relative" }}>
-              <View style={{ borderRadius: 999, borderWidth: 3, borderColor: theme.accent }}>
+              <View style={{ borderRadius: 999, borderWidth: 4, borderColor: theme.accent, padding: 4 }}>
                 <Image
                   source={user?.imageUrl}
-                  style={{ width: 96, height: 96, borderRadius: 999 }}
+                  style={{ width: 100, height: 100, borderRadius: 999, backgroundColor: theme.cardBg }}
                 />
               </View>
-              <Pressable style={{ position: "absolute", bottom: 2, right: 2, width: 30, height: 30, borderRadius: 15, backgroundColor: theme.accent, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: theme.bg }}>
-                <Ionicons name="camera" size={14} color={theme.bg} />
+              <Pressable style={{ position: "absolute", bottom: 0, right: 0, width: 32, height: 32, borderRadius: 16, backgroundColor: theme.accent, alignItems: "center", justifyContent: "center", borderWidth: 3, borderColor: theme.bg }}>
+                <Camera size={14} color="#FFFFFF" />
               </Pressable>
             </View>
 
-            <Text style={{ fontSize: 22, fontWeight: "800", color: theme.text, marginTop: 14 }}>
-              {user?.firstName} {user?.lastName}
+            <Text style={{ fontSize: 22, fontWeight: "800", color: "#FFFFFF", marginTop: 16 }}>
+              {user?.firstName ? `${user.firstName} ${user.lastName || ""}` : "Angel Wing"}
             </Text>
-            <Text style={{ color: theme.textMuted, marginTop: 4, fontSize: 13 }}>
-              {user?.emailAddresses[0]?.emailAddress}
-            </Text>
-
-            {/* Life Mode Switcher */}
-            <View style={{ marginTop: 24, paddingHorizontal: 20, width: "100%" }}>
-              <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8, marginLeft: 4 }}>
-                Life Mode
+            <View style={{ backgroundColor: theme.cardBg, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginTop: 8 }}>
+              <Text style={{ color: theme.accent, fontSize: 13, fontWeight: "500" }}>
+                @{user?.username || "username"}
               </Text>
-              <View style={{ flexDirection: "row", backgroundColor: theme.cardBg, borderRadius: 16, padding: 4 }}>
-                {(["personal", "education", "professional"] as const).map((m) => {
-                  const isActive = mode === m;
-                  return (
-                    <Pressable
-                      key={m}
-                      onPress={() => setMode(m)}
-                      style={{
-                        flex: 1,
-                        paddingVertical: 12,
-                        alignItems: "center",
-                        justifyContent: "center",
-                        backgroundColor: isActive ? theme.accent : "transparent",
-                        borderRadius: 12,
-                      }}
-                    >
-                      <Ionicons 
-                        name={m === "personal" ? "chatbubbles" : m === "education" ? "school" : "briefcase"} 
-                        size={18} 
-                        color={isActive ? "#FFF" : theme.textMuted} 
-                      />
-                      <Text style={{ color: isActive ? "#FFF" : theme.textMuted, fontSize: 12, fontWeight: "600", marginTop: 4, textTransform: "capitalize" }}>
-                        {m}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
             </View>
           </View>
 
-          {/* ── Menu Sections ── */}
-          {MENU_SECTIONS.map((section) => (
-            <View key={section.title} style={{ marginTop: 16, marginHorizontal: 20 }}>
-              <Text style={{ color: theme.textMuted, fontSize: 11, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8, marginLeft: 4 }}>
-                {section.title}
-              </Text>
-              <View style={{ backgroundColor: theme.cardBg, borderRadius: 16, overflow: "hidden" }}>
-                {section.items.map((item, idx) => (
+          {/* ── Life Mode Switcher ── */}
+          <View style={{ paddingHorizontal: 20, width: "100%", marginBottom: 32 }}>
+            <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginBottom: 10, marginLeft: 4 }}>
+              LIFE MODE
+            </Text>
+            <View style={{ flexDirection: "row", backgroundColor: theme.cardBg, borderRadius: 16, padding: 6 }}>
+              {(["personal", "education", "professional"] as const).map((m) => {
+                const isActive = mode === m;
+                return (
                   <Pressable
-                    key={item.label}
-                    style={({ pressed }) => ({
-                      flexDirection: "row",
-                      alignItems: "center",
-                      paddingHorizontal: 16,
+                    key={m}
+                    onPress={() => setMode(m)}
+                    style={{
+                      flex: 1,
                       paddingVertical: 14,
-                      backgroundColor: pressed ? `${theme.accent}10` : "transparent",
-                      borderBottomWidth: idx < section.items.length - 1 ? 1 : 0,
-                      borderBottomColor: theme.border,
-                    })}
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: isActive ? theme.accent : "transparent",
+                      borderRadius: 12,
+                    }}
                   >
-                    <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${item.color}20`, alignItems: "center", justifyContent: "center" }}>
-                      <Ionicons name={item.icon as any} size={18} color={item.color} />
-                    </View>
-                    <Text style={{ flex: 1, marginLeft: 12, color: theme.text, fontWeight: "500", fontSize: 15 }}>{item.label}</Text>
-                    {item.value && <Text style={{ color: theme.textMuted, fontSize: 13, marginRight: 6 }}>{item.value}</Text>}
-                    <Ionicons name="chevron-forward" size={17} color={theme.textMuted} />
+                    {m === "personal" && <MessageSquare size={18} color={isActive ? "#000000" : theme.textMuted} />}
+                    {m === "education" && <BookOpen size={18} color={isActive ? "#000000" : theme.textMuted} />}
+                    {m === "professional" && <Briefcase size={18} color={isActive ? "#000000" : theme.textMuted} />}
+                    <Text style={{ color: isActive ? "#000000" : theme.textMuted, fontSize: 13, fontWeight: "700", marginTop: 6, textTransform: "capitalize" }}>
+                      {m}
+                    </Text>
                   </Pressable>
-                ))}
-              </View>
+                );
+              })}
             </View>
-          ))}
+          </View>
+
+          {/* ── Appearance Card ── */}
+          <View style={{ paddingHorizontal: 20, width: "100%", marginBottom: 32 }}>
+            <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginBottom: 10, marginLeft: 4 }}>
+              APPEARANCE
+            </Text>
+            <View style={{ backgroundColor: theme.cardBg, borderRadius: 20, padding: 20 }}>
+              
+              {/* Dark Mode Row */}
+              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
+                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: "rgba(99, 102, 241, 0.1)", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
+                  <Moon size={20} color="#6366F1" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "600" }}>Dark Mode</Text>
+                  <Text style={{ color: theme.textMuted, fontSize: 13, marginTop: 2 }}>Transforms UI to Neon mode</Text>
+                </View>
+                <Switch 
+                  value={true} 
+                  onValueChange={() => {}} 
+                  trackColor={{ false: theme.border, true: "rgba(99, 102, 241, 0.5)" }}
+                  thumbColor="#6366F1"
+                />
+              </View>
+
+              <View style={{ height: 1, backgroundColor: theme.border, marginBottom: 20 }} />
+
+              {/* Theme Color Row */}
+              <View>
+                <Text style={{ color: theme.textMuted, fontSize: 14, fontWeight: "600", marginBottom: 16 }}>
+                  Theme Color
+                </Text>
+                <View style={{ flexDirection: "row", gap: 16 }}>
+                  {colorPalettes.map((palette, idx) => (
+                    <Pressable
+                      key={palette.name}
+                      onPress={() => setPalette(idx)}
+                      style={{
+                        width: 44, height: 44, borderRadius: 22,
+                        backgroundColor: palette.accent,
+                        borderWidth: 2,
+                        borderColor: paletteIndex === idx ? "#FFFFFF" : "transparent",
+                      }}
+                    />
+                  ))}
+                </View>
+              </View>
+              
+            </View>
+          </View>
+
+          {/* ── Top Secret Card ── */}
+          <View style={{ paddingHorizontal: 20, width: "100%", marginBottom: 32 }}>
+            <Text style={{ color: theme.textMuted, fontSize: 12, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginBottom: 10, marginLeft: 4 }}>
+              TOP SECRET (ONLY YOU CAN SEE THIS)
+            </Text>
+            <View style={{ backgroundColor: theme.cardBg, borderRadius: 20, padding: 20 }}>
+              
+              {/* Email Row */}
+              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 20 }}>
+                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: "rgba(59, 130, 246, 0.1)", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
+                  <AtSign size={20} color="#3B82F6" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.textMuted, fontSize: 13, fontWeight: "500" }}>Registered Email</Text>
+                  <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "600", marginTop: 2 }}>
+                    {user?.emailAddresses[0]?.emailAddress || "awing7748@gmail.com"}
+                  </Text>
+                </View>
+                <Lock size={18} color={theme.textMuted} />
+              </View>
+
+              <View style={{ height: 1, backgroundColor: theme.border, marginBottom: 20 }} />
+
+              {/* Phone Row */}
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: "rgba(16, 185, 129, 0.1)", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
+                  <Phone size={20} color="#10B981" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: theme.textMuted, fontSize: 13, fontWeight: "500" }}>Verified Phone Number</Text>
+                  <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "600", marginTop: 2 }}>
+                    {user?.phoneNumbers?.[0]?.phoneNumber || "Not Set"}
+                  </Text>
+                </View>
+                <Lock size={18} color={theme.textMuted} />
+              </View>
+              
+            </View>
+          </View>
 
           {/* ── Sign Out ── */}
-          <Pressable
-            onPress={() => signOut()}
-            style={({ pressed }) => ({
-              marginHorizontal: 20,
-              marginTop: 24,
-              backgroundColor: pressed ? "#EF444420" : "#EF444415",
-              borderRadius: 16,
-              paddingVertical: 16,
-              alignItems: "center",
-              borderWidth: 1,
-              borderColor: "#EF444430",
-            })}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-              <Text style={{ color: "#EF4444", fontWeight: "700", fontSize: 15 }}>Log Out</Text>
-            </View>
-          </Pressable>
+          <View style={{ paddingHorizontal: 20, width: "100%" }}>
+            <Pressable
+              onPress={() => signOut()}
+              style={{
+                backgroundColor: "rgba(239, 68, 68, 0.1)",
+                borderRadius: 20,
+                paddingVertical: 16,
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: "rgba(239, 68, 68, 0.2)",
+              }}
+            >
+              <Text style={{ color: "#EF4444", fontWeight: "700", fontSize: 16 }}>Sign Out</Text>
+            </Pressable>
+          </View>
 
-          {/* App version */}
-          <Text style={{ color: "#3A3A45", fontSize: 12, textAlign: "center", marginTop: 20 }}>
-            GrouPMeet v1.0.0
-          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>

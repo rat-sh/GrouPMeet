@@ -1,11 +1,11 @@
 import { Redirect, Tabs } from "expo-router";
 import React from "react";
-import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@clerk/expo";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { View } from "react-native";
 import { useSocketStore } from "@/lib/socket";
-import { useModeStore, modeTheme } from "@/lib/modeStore";
+import { useAppTheme, useModeStore } from "@/lib/modeStore";
+import { MessageCircle, Users, User } from "lucide-react-native";
 
 import { useMe } from "@/hooks/useUsers";
 
@@ -16,8 +16,7 @@ const TabsLayout = () => {
   const unreadChats = useSocketStore((s) => s.unreadChats);
   const hasUnread = unreadChats.size > 0;
 
-  const mode = useModeStore((s) => s.mode);
-  const theme = modeTheme[mode];
+  const theme = useAppTheme();
 
   if (!isLoaded || (isSignedIn && isLoadingMe)) return null;
   if (!isSignedIn) return <Redirect href="/(auth)" />;
@@ -53,10 +52,10 @@ const TabsLayout = () => {
           title: "Chats",
           tabBarIcon: ({ color, size, focused }) => (
             <View>
-              <Ionicons
-                name={focused ? "chatbubbles" : "chatbubbles-outline"}
-                size={size}
+              <MessageCircle
+                size={22}
                 color={color}
+                strokeWidth={focused ? 2.5 : 2}
               />
               {hasUnread && (
                 <View
@@ -79,12 +78,12 @@ const TabsLayout = () => {
       <Tabs.Screen
         name="group"
         options={{
-          title: mode === "education" ? "Channels" : mode === "professional" ? "Workspaces" : "Groups",
+          title: useModeStore.getState().mode === "education" ? "Channels" : useModeStore.getState().mode === "professional" ? "Workspaces" : "Groups",
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              name={focused ? "people" : "people-outline"}
-              size={size}
+            <Users
+              size={22}
               color={color}
+              strokeWidth={focused ? 2.5 : 2}
             />
           ),
         }}
@@ -95,10 +94,10 @@ const TabsLayout = () => {
         options={{
           title: "Profile",
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons
-              name={focused ? "person" : "person-outline"}
-              size={size}
+            <User
+              size={22}
               color={color}
+              strokeWidth={focused ? 2.5 : 2}
             />
           ),
         }}

@@ -3,11 +3,11 @@ import { Image } from "expo-image";
 import { View, Text, Pressable } from "react-native";
 import { formatDistanceToNow } from "date-fns";
 import { useSocketStore } from "@/lib/socket";
-import { useModeStore, modeTheme } from "@/lib/modeStore";
+import { useAppTheme } from "@/lib/modeStore";
+import { Users, User } from "lucide-react-native";
 
 const ChatItem = ({ chat, onPress }: { chat: Chat; onPress: () => void }) => {
-  const { mode } = useModeStore();
-  const theme = modeTheme[mode];
+  const theme = useAppTheme();
   const isGroup = chat.isGroup;
   
   // For DMs we use participant, for Groups we use the chat's name and avatar
@@ -41,7 +41,9 @@ const ChatItem = ({ chat, onPress }: { chat: Chat; onPress: () => void }) => {
           />
         ) : (
           <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: theme.cardBg, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ fontSize: 20, color: theme.textMuted }}>{isGroup ? "👥" : "👤"}</Text>
+            {isGroup
+              ? <Users size={24} color={theme.textMuted} />
+              : <User size={24} color={theme.textMuted} />}
           </View>
         )}
         {isOnline && (
@@ -88,7 +90,7 @@ const ChatItem = ({ chat, onPress }: { chat: Chat; onPress: () => void }) => {
         <Text
           style={{
             fontSize: 13,
-            color: isTyping ? "#F4A261" : hasUnread ? "#C0C0C8" : "#6B6B70",
+            color: isTyping ? theme.accent : hasUnread ? theme.text : theme.textMuted,
             fontStyle: isTyping ? "italic" : "normal",
             fontWeight: hasUnread ? "500" : "400",
           }}

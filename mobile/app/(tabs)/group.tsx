@@ -1,9 +1,9 @@
 import ChatItem from "@/components/ChatItem";
 import EmptyUI from "@/components/EmptyUI";
 import { useChats } from "@/hooks/useChats";
-import { useModeStore, modeTheme } from "@/lib/modeStore";
+import { useAppTheme, useModeStore } from "@/lib/modeStore";
 import { Chat } from "@/types";
-import { Ionicons } from "@expo/vector-icons";
+import { Plus, Search, WifiOff } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -25,8 +25,7 @@ function Header({
   setSearch: (v: string) => void;
 }) {
   const router = useRouter();
-  const { mode } = useModeStore();
-  const theme = modeTheme[mode];
+  const theme = useAppTheme();
 
   return (
     <View style={{ paddingTop: 8, paddingBottom: 12 }}>
@@ -54,7 +53,7 @@ function Header({
               justifyContent: "center",
             }}
           >
-            <Ionicons name="add" size={24} color={theme.bg} />
+            <Plus size={24} color={theme.bg} />
           </Pressable>
         </View>
       </View>
@@ -72,7 +71,7 @@ function Header({
             gap: 8,
           }}
         >
-          <Ionicons name="search" size={16} color={theme.textMuted} />
+          <Search size={16} color={theme.textMuted} />
           <TextInput
             placeholder="Search groups…"
             placeholderTextColor={theme.textMuted}
@@ -90,8 +89,7 @@ function Header({
 const GroupsTab = () => {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const { mode } = useModeStore();
-  const theme = modeTheme[mode];
+  const theme = useAppTheme();
 
   const { data: allChats, isLoading, error, refetch } = useChats();
 
@@ -140,7 +138,7 @@ const GroupsTab = () => {
         style={{ flex: 1, backgroundColor: theme.bg }}
       >
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
-          <Ionicons name="wifi-outline" size={48} color={theme.textMuted} />
+          <WifiOff size={48} color={theme.textMuted} />
           <Text style={{ color: theme.textMuted, fontSize: 16, marginTop: 12 }}>
             Failed to load groups
           </Text>
@@ -197,7 +195,7 @@ const GroupsTab = () => {
             title="No groups yet"
             subtitle="Create a group with your friends!"
             iconName="people-outline"
-            iconColor="#6B6B70"
+            iconColor={theme.textMuted}
             iconSize={64}
             buttonLabel="New Group"
             onPressButton={() => router.push("/new-group" as any)}

@@ -1,9 +1,9 @@
 import ChatItem from "@/components/ChatItem";
 import EmptyUI from "@/components/EmptyUI";
 import { useChats } from "@/hooks/useChats";
-import { useModeStore, modeTheme } from "@/lib/modeStore";
+import { useAppTheme, useModeStore } from "@/lib/modeStore";
 import { Chat } from "@/types";
-import { Ionicons } from "@expo/vector-icons";
+import { PenSquare, Search, WifiOff } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -25,8 +25,7 @@ function Header({
   setSearch: (v: string) => void;
 }) {
   const router = useRouter();
-  const { mode } = useModeStore();
-  const theme = modeTheme[mode];
+  const theme = useAppTheme();
 
   return (
     <View style={{ paddingTop: 8, paddingBottom: 12 }}>
@@ -54,7 +53,7 @@ function Header({
               justifyContent: "center",
             }}
           >
-            <Ionicons name="create-outline" size={20} color={theme.bg} />
+            <PenSquare size={20} color={theme.bg} />
           </Pressable>
         </View>
       </View>
@@ -72,7 +71,7 @@ function Header({
             gap: 8,
           }}
         >
-          <Ionicons name="search" size={16} color={theme.textMuted} />
+          <Search size={16} color={theme.textMuted} />
           <TextInput
             placeholder="Search conversations…"
             placeholderTextColor={theme.textMuted}
@@ -90,8 +89,7 @@ function Header({
 const ChatsTab = () => {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const { mode } = useModeStore();
-  const theme = modeTheme[mode];
+  const theme = useAppTheme();
 
   const { data: allChats, isLoading, error, refetch } = useChats();
 
@@ -141,7 +139,7 @@ const ChatsTab = () => {
         style={{ flex: 1, backgroundColor: theme.bg }}
       >
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 32 }}>
-          <Ionicons name="wifi-outline" size={48} color={theme.textMuted} />
+          <WifiOff size={48} color={theme.textMuted} />
           <Text style={{ color: theme.textMuted, fontSize: 16, marginTop: 12 }}>
             Failed to load chats
           </Text>
@@ -197,8 +195,8 @@ const ChatsTab = () => {
           <EmptyUI
             title="No conversations yet"
             subtitle="Start a conversation with someone!"
-            iconName="chatbubbles-outline"
-            iconColor="#6B6B70"
+            iconName="chatbubbles-outline" // EmptyUI currently still uses Ionicons internally unless we update it
+            iconColor={theme.textMuted}
             iconSize={64}
             buttonLabel="New Chat"
             onPressButton={() => router.push("/new-chat" as any)}
