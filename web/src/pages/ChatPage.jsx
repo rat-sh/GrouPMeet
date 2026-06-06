@@ -26,11 +26,6 @@ function ChatPage() {
   const [messageInput, setMessageInput] = useState("");
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
 
-  // Interceptor: Redirect to onboarding if no phone number
-  if (!currentUserLoading && currentUser && !currentUser.phoneNumber) {
-    return <Navigate to="/onboarding" />;
-  }
-
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
@@ -41,7 +36,7 @@ function ChatPage() {
   const { data: allChats = [], isLoading: chatsLoading } = useChats();
   const { mode } = useModeStore();
   const chats = allChats.filter(c => c.mode === mode);
-  
+
   const { data: messages = [], isLoading: messagesLoading } = useMessages(activeChatId);
   const startChatMutation = useGetOrCreateChat();
 
@@ -49,6 +44,11 @@ function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeChatId, messages]);
+
+  // Interceptor: Redirect to onboarding if no phone number (AFTER all hooks)
+  if (!currentUserLoading && currentUser && !currentUser.phoneNumber) {
+    return <Navigate to="/onboarding" />;
+  }
 
   const handleStartChat = (participantId) => {
     startChatMutation.mutate(participantId, {
