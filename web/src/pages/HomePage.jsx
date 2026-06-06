@@ -20,13 +20,13 @@ function HomePage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <SignInButton mode="modal">
+            <SignInButton mode="modal" afterSignInUrl="/chat">
               <button className="px-5 py-2.5 text-sm font-medium text-base-content/50 hover:text-base-content transition">
                 Sign in
               </button>
             </SignInButton>
 
-            <SignUpButton mode="modal">
+            <SignUpButton mode="modal" afterSignUpUrl="/onboarding">
               <button className="btn gap-2 bg-linear-to-r from-amber-500 to-orange-500 text-sm font-semibold rounded-full hover:opacity-90 shadow-lg shadow-orange-500/25 border-none">
                 Get Started
                 <ArrowRightIcon className="w-4 h-4" />
@@ -62,14 +62,14 @@ function HomePage() {
 
           {/* CTA BTNS */}
           <div className="mt-10 flex items-center gap-4">
-            <SignUpButton mode="modal">
+            <SignUpButton mode="modal" afterSignUpUrl="/onboarding">
               <button className="group flex items-center gap-3 px-8 py-4 bg-base-100 text-base-content font-semibold rounded-2xl hover:bg-base-200 transition">
                 Start chatting
                 <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </button>
             </SignUpButton>
 
-            <SignInButton mode="modal">
+            <SignInButton mode="modal" afterSignInUrl="/chat">
               <button className="px-8 py-4 text-base-content/60 font-semibold hover:text-base-content transition">
                 I have an account
               </button>
