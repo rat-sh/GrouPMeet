@@ -51,7 +51,7 @@ if(process.env.NODE_ENV === "production"){
     const webDist = process.env.WEB_DIST_PATH ?? path.join(__dirname,"../../web/dist");
     app.use(express.static(webDist));
 
-    app.get("*", (_, res) => {
+    app.get(/.*/, (_, res) => {
         res.sendFile(path.join(webDist, "index.html"));
     });
 }
