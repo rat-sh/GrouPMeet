@@ -9,7 +9,7 @@ export const useChats = () => {
     queryKey: ["chats"],
     queryFn: async () => {
       const token = await getToken();
-      const res = await api.get("/chats", {
+      const res = await api.get("/chat", {
         headers: { Authorization: `Bearer ${token}` },
       });
       return res.data;
@@ -25,7 +25,7 @@ export const useGetOrCreateChat = () => {
     mutationFn: async (participantId) => {
       const token = await getToken();
       const res = await api.post(
-        `/chats/with/${participantId}`,
+        `/chat/with/${participantId}`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
