@@ -51,9 +51,9 @@ if(process.env.NODE_ENV === "production"){
     const webDist = process.env.WEB_DIST_PATH ?? path.join(__dirname,"../../web/dist");
     app.use(express.static(webDist));
 
-    app.get("/{*path}",(_,res)=>{
-        res.sendFile(path.join(webDist,"index.html"));
-    })
+    app.get("*", (_, res) => {
+        res.sendFile(path.join(webDist, "index.html"));
+    });
 }
 
 // errorHandler must always be last
