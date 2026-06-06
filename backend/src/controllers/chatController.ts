@@ -71,8 +71,8 @@ export async function getOrCreateChat(req: AuthRequest, res: Response, next: Nex
         // Atomic upsert — avoids TOCTOU race between find and insert
         const participants = [userId, participantId].sort(); // normalize order for unique index
         const chat = await Chat.findOneAndUpdate(
-            { participants: { $all: participants } },
-            { $setOnInsert: { participants } },
+            { isGroup: false, participants: { $all: participants, $size: 2 } },
+            { $setOnInsert: { participants, isGroup: false } },
             { new: true, upsert: true }
         )
             .populate("participants", "displayName username email avatar")

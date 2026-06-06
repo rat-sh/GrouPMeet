@@ -18,7 +18,7 @@ export function NewChatModal({ onStartChat, isPending, isOpen, onClose }) {
   const searchResults = allUsers.filter((u) => {
     if (!searchQuery.trim()) return false;
     const query = searchQuery.toLowerCase();
-    return u.name?.toLowerCase().includes(query) || u.email?.toLowerCase().includes(query);
+    return u.displayName?.toLowerCase().includes(query) || u.email?.toLowerCase().includes(query);
   });
 
   return (
@@ -60,7 +60,7 @@ export function NewChatModal({ onStartChat, isPending, isOpen, onClose }) {
                     )}
                   </div>
                   <div className="text-left">
-                    <p className="font-medium text-sm">{u.name}</p>
+                    <p className="font-medium text-sm">{u.displayName}</p>
                     <p className="text-xs text-base-content/70">{u.email}</p>
                   </div>
                 </button>

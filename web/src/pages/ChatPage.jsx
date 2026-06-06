@@ -34,7 +34,7 @@ function ChatPage() {
   useSocketConnection();
 
   const { data: allChats = [], isLoading: chatsLoading } = useChats();
-  const { mode } = useModeStore();
+  const { mode, setMode } = useModeStore();
   const chats = allChats.filter(c => c.mode === mode);
 
   const { data: messages = [], isLoading: messagesLoading } = useMessages(activeChatId);
@@ -52,7 +52,12 @@ function ChatPage() {
 
   const handleStartChat = (participantId) => {
     startChatMutation.mutate(participantId, {
-      onSuccess: (chat) => setSearchParams({ chat: chat._id }),
+      onSuccess: (chat) => {
+        if (chat.mode && chat.mode !== mode) {
+          setMode(chat.mode);
+        }
+        setSearchParams({ chat: chat._id });
+      },
     });
   };
 
